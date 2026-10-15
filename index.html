@@ -113,6 +113,7 @@ return o+'</svg>';
  }
  return o+'</svg>';
 }
+}
 let printMode=false;
 function closePrintView(){
  const view=document.getElementById('print-view');if(view)view.remove();
@@ -256,4 +257,4 @@ async function cloudSaveRecords(records){if(!cloudEndpoint())return;cloudStatus(
 async function cloudSaveAll(){if(!cloudEndpoint()){alert('先にウェブアプリURLを登録してください');return}if(!archive.length){alert('保存する問題がありません');return}await cloudSaveRecords(archive)}
 window.addEventListener('DOMContentLoaded',()=>{const e=document.getElementById('cloudUrl');if(e)e.value=cloudEndpoint()});
 
-renderArchive();if("serviceWorker" in navigator && location.protocol==="https:"){Promise.resolve()}}</script></body></html>
+renderArchive();if("serviceWorker" in navigator && location.protocol==="https:"){Promise.resolve()}</script></body></html>
