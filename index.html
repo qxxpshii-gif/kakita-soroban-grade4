@@ -89,6 +89,7 @@ let q=set[k][i],y=top+(i+.68)*step;
 o+=txt(x+6.5,y,i+1,3.3,'middle');
 o+=txt(x+20,y,`${fmt(q.a)} ${k==='mul'?'×':'÷'} ${fmt(q.b)} ＝`,5.2,'start','Abacus');
 }
+return o+'</svg>';
 }else{
  const left=9,right=W-9,top=43,bottom=H-9,gap=4,blockH=(bottom-top-2*gap)/3;
  const bands=[[0,13],[13,22],[22,30]];
@@ -188,7 +189,7 @@ async function exportPDF(k,button){
  finally{if(button){button.disabled=false;button.textContent=old}}
 }
 
-function printKind(k){
+function printKindCore(k){
  if(!selectedRecords.length){alert('先に問題を作成または選択してください');return}
  closePrintView();
  const kinds=k==='portrait'?['mul','div']:k==='landscape'?['sum','mental']:[k];
@@ -237,6 +238,11 @@ function printKind(k){
  document.body.appendChild(view);
  document.body.classList.add('show-print');printMode=true;
  window.scrollTo(0,0);
+}
+
+function printKind(k){
+ try{printKindCore(k);const st=document.getElementById('status');if(st)st.textContent='印刷用画面を表示しました。上部の「印刷する」を押してください。';}
+ catch(e){console.error('PRINT ERROR',e);const msg='印刷画面の表示に失敗しました：'+(e&&e.message||String(e));const st=document.getElementById('status');if(st)st.textContent=msg;alert(msg);}
 }
 
 // Google Sheets connection. The original local archive and printing routines remain unchanged.
