@@ -32,29 +32,26 @@ function makeSet(){
     // 見本に近い大きさで、割り切れる問題を生成する
     set.div.push({a:d*q,b:d,ans:q});
          const sd=Array(8).fill(i<4?2:i<8?3:i<13?4:i<18?5:i<22?6:i<26?7:8);
-     // Start each problem with two additions, then place the required subtractions.
-     // Retry with fresh values if a subtraction cannot preserve a nonnegative running total.
+     // Subtraction positions never touch: every subtraction is preceded by
+     // an addition, so its full-digit value can always be subtracted safely.
      const minusCount=minusPlan[i];
-     let vals,valid=false;
-     for(let attempt=0;attempt<2000 && !valid;attempt++){
-       vals=sd.map(digits);
-       if(!minusCount){valid=true;break;}
-       const positions=new Set(shuffle([2,3,4,5,6,7]).slice(0,minusCount));
-       let running=0;
-       valid=true;
-       for(let at=0;at<8;at++){
-         if(positions.has(at)){
-           const low=10**(sd[at]-1),high=10**sd[at]-1;
-           const cap=Math.min(high,running);
-           if(cap<low){valid=false;break;}
-           vals[at]=-rand(low,cap);
-         }
-         running+=vals[at];
-         if(running<0){valid=false;break;}
+     const positions=new Set(shuffle([2,4,6]).slice(0,minusCount));
+     const vals=[];
+     let running=0;
+     for(let at=0;at<8;at++){
+       const low=10**(sd[at]-1), high=10**sd[at]-1;
+       let value;
+       if(positions.has(at)){
+         // At least one full-digit positive entry immediately precedes this.
+         // This makes the interval [low, min(high, running)] nonempty.
+         value=-rand(low,Math.min(high,running));
+       }else{
+         value=rand(low,high);
        }
+       running+=value;
+       vals.push(value);
      }
-     if(!valid) throw Error('見取算を生成できませんでした。もう一度お試しください');
-     set.sum.push({vals,ans:vals.reduce((x,y)=>x+y,0)});
+     set.sum.push({vals,ans:running});
 const md=Array(6).fill(i<6?2:i<12?3:i<18?4:i<24?5:6);
     let mv=md.map(digits);
     set.mental.push({vals:mv,ans:mv.reduce((x,y)=>x+y,0)});
