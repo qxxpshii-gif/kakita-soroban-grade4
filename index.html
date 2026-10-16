@@ -276,9 +276,9 @@ function printKindCore(k){
  .print-toolbar .back{background:#e2eae5;color:#204637}
  .print-help{font-size:13px;color:#42564b;margin:10px 2px}
  .print-sheet{background:white;box-shadow:0 2px 14px #aaa8;margin:16px auto;overflow:hidden;max-width:100%}
- .print-sheet svg{display:block;width:100%;height:100%}
+ .print-sheet svg{display:block;width:100%;height:100%;max-width:100%;max-height:100%}
  .print-sheet.b4portrait{width:257mm;aspect-ratio:257/364;page:b4portrait}
- .print-sheet.b4landscape{width:364mm;aspect-ratio:364/257;page:b4landscape}
+ .print-sheet.b4landscape{width:350mm;aspect-ratio:364/257;page:b4landscape}
  .print-sheet.a4landscape{width:297mm;aspect-ratio:297/210;page:a4landscape}
  @page b4portrait{size:257mm 364mm;margin:0}
  @page b4landscape{size:364mm 257mm;margin:0}
@@ -287,10 +287,10 @@ function printKindCore(k){
  html,body,body.show-print{margin:0!important;padding:0!important;background:white!important}
  #print-view{max-width:none!important;margin:0!important;padding:0!important}
  .print-toolbar,.print-help{display:none!important}
- .print-sheet{max-width:none!important;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always;overflow:hidden!important}
+ .print-sheet{max-width:none!important;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always;break-inside:avoid!important;page-break-inside:avoid!important;overflow:hidden!important}
  .print-sheet:last-child{break-after:auto;page-break-after:auto}
  .print-sheet.b4portrait{width:257mm!important;height:364mm!important}
- .print-sheet.b4landscape{width:364mm!important;height:257mm!important}
+ .print-sheet.b4landscape{width:350mm!important;height:247mm!important;break-inside:avoid!important;page-break-inside:avoid!important}
  .print-sheet.a4landscape{width:297mm!important;height:210mm!important}
  }
  `;
