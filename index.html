@@ -19,9 +19,16 @@ function makeSet(){
   for(let i=0;i<30;i++){
     const band=Math.floor(i/5);
     let [ad,bd]=mulSpecs[band];
+    // 1・10・100・1000… のような10の累乗だけの単純な乗除算は除外。
+    // 桁数の指定は保ったまま再抽選する。
+    const isPowerOfTen=n=>n>0 && /^10*$/.test(String(n));
     let a=digits(ad),b=digits(bd);
+    while(isPowerOfTen(a)) a=digits(ad);
+    while(isPowerOfTen(b)) b=digits(bd);
     set.mul.push({a,b,ans:a*b});
     let [dd,qd]=divSpecs[band],d=digits(dd),q=digits(qd);
+    while(isPowerOfTen(d)) d=digits(dd);
+    while(isPowerOfTen(q)) q=digits(qd);
     // 見本に近い大きさで、割り切れる問題を生成する
     set.div.push({a:d*q,b:d,ans:q});
          const sd=Array(8).fill(i<4?2:i<8?3:i<13?4:i<18?5:i<22?6:i<26?7:8);
@@ -53,7 +60,39 @@ function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(archive))
 function renderArchive(){const target=document.getElementById('archiveList');if(!target)return;target.innerHTML=archive.length?archive.slice().reverse().map(rec=>`<div style="border:1px solid #d6e3dc;border-radius:9px;padding:10px;margin:8px 0"><b>第${rec.id}回</b> <span style="color:#61746b;font-size:12px">${rec.date||''}</span><div><button onclick="selectRecord(${rec.id})">選択・再印刷</button></div></div>`).join(''):'<p>まだ保存された問題はありません。</p>'}
 function showActions(){document.getElementById('actions').innerHTML=`<p class="hint">選択中：${selectedRecords.map(r=>'第'+r.id+'回').join('、')}</p><button style="background:#155c9a" onclick="exportPDF('portrait',this)">📄 かけ算・わり算 PDF（B4縦）</button><button style="background:#155c9a" onclick="exportPDF('landscape',this)">📄 見取算・見取暗算 PDF（B4横）</button><button style="background:#155c9a" onclick="exportPDF('answer',this)">📄 解答 PDF（A4横）</button><p class="hint">iPhoneでは青いボタンを押すと印刷用画面が開きます。「印刷する」を押し、印刷プレビューから共有・保存できます。下の緑色ボタンは従来のブラウザー印刷です。</p><button style="background:#1d7653" onclick="printKind('portrait')">🖨️ かけ算・わり算をまとめて印刷（B4縦）</button><button style="background:#1d7653" onclick="printKind('landscape')">🖨️ 見取算・見取暗算をまとめて印刷（B4横）</button><button onclick="printKind('mul')">かけ算 B4縦</button><button onclick="printKind('div')">わり算 B4縦</button><button onclick="printKind('sum')">見取算 B4横</button><button onclick="printKind('mental')">見取暗算 B4横</button><button class="secondary" onclick="printKind('answer')">解答 A4横</button>`}
 function selectRecord(id){let rec=archive.find(x=>x.id===id);if(!rec)return;selectedRecords=[rec];sets=[rec.set];showActions();document.getElementById('status').textContent=`第${id}回を選択しました。種目の印刷ボタンを押してください。`}
-function generate(){let count=Number(document.getElementById('count').value);let next=archive.reduce((n,r)=>Math.max(n,r.id),0)+1;let now=new Date().toLocaleDateString('ja-JP');let recs=Array.from({length:count},(_,i)=>({id:next+i,date:now,set:makeSet()}));archive.push(...recs);selectedRecords=recs;sets=recs.map(x=>x.set);let saved=persist();renderArchive();showActions();if(cloudEndpoint())cloudSaveRecords(recs);document.getElementById('status').textContent=`第${next}〜${next+count-1}回を作成しました。${saved?'この端末に保存しました。':'保存に失敗しました。'}`}
+async function generate(){
+ const button=document.querySelector('button[onclick="generate()"]');
+ const status=document.getElementById('status');
+ if(button.disabled)return;
+ const count=Number(document.getElementById('count').value);
+ const next=archive.reduce((n,r)=>Math.max(n,r.id),0)+1;
+ const now=new Date().toLocaleDateString('ja-JP');
+ const recs=[];
+ button.disabled=true;
+ try{
+   status.textContent=`${count}回分の問題を作成しています…（0/${count}）`;
+   for(let i=0;i<count;i++){
+     // Allow the iPhone to paint progress instead of appearing frozen.
+     await new Promise(resolve=>setTimeout(resolve,0));
+     recs.push({id:next+i,date:now,set:makeSet()});
+     status.textContent=`${count}回分の問題を作成しています…（${i+1}/${count}）`;
+   }
+   archive.push(...recs);
+   selectedRecords=recs;
+   sets=recs.map(x=>x.set);
+   // Save separately so a storage quota failure never prevents printing.
+   let saved=false;
+   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(archive));saved=true}catch(e){console.warn('保存容量不足',e)}
+   renderArchive();
+   showActions();
+   status.textContent=`第${next}〜${next+count-1}回（${count}回分）を作成しました。${saved?'この端末に保存しました。':'端末の保存容量が不足しています。印刷またはバックアップをしてください。'}`;
+   try{if(cloudEndpoint())cloudSaveRecords(recs)}catch(e){console.warn('クラウド保存',e)}
+ }catch(e){
+   console.error('問題作成エラー',e);
+   status.textContent='問題の作成に失敗しました：'+(e&&e.message?e.message:String(e));
+   alert(status.textContent);
+ }finally{button.disabled=false}
+}
 function backup(){let blob=new Blob([JSON.stringify({version:1,records:archive},null,2)],{type:'application/json'});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download='柿田そろばん教室_問題バックアップ_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
 async function restore(e){let file=e.target.files[0];if(!file)return;try{let data=JSON.parse(await file.text());if(!Array.isArray(data.records)||data.records.some(r=>!Number.isInteger(r.id)||!r.set||!groups.every(k=>Array.isArray(r.set[k])&&r.set[k].length===30)))throw Error('形式が違います');let byId=new Map(archive.map(r=>[r.id,r]));let max=archive.reduce((m,r)=>Math.max(m,r.id),0);for(let rec of data.records){if(byId.has(rec.id)){let old=byId.get(rec.id);if(JSON.stringify(old.set)!==JSON.stringify(rec.set)){rec={...rec,id:++max};byId.set(rec.id,rec)}}else byId.set(rec.id,rec)}archive=[...byId.values()].sort((a,b)=>a.id-b.id);persist();renderArchive();alert('バックアップを読み込みました。')}catch(err){alert('バックアップを読み込めませんでした。'+err.message)}e.target.value=''}
 
