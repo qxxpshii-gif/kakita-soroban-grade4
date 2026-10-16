@@ -6,8 +6,14 @@
 let sets=[];let selectedRecords=[];const STORAGE_KEY="kakita_grade4_archive_v1";let archive=[];try{archive=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch(e){archive=[]}const labels={mul:'かけ算',div:'わり算',sum:'見取算',mental:'見取暗算'};const groups=['mul','div','sum','mental'];const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;const digits=(n)=>rand(10**(n-1),10**n-1);const fmt=n=>Math.abs(n).toLocaleString('en-US');const safe=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // 大会見本（第60・61・63回）に合わせた4年生以上の桁数構成。
 // わり算は必ず割り切れる整数問題。見取算は途中・最終合計が負にならない。
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]]}return a}
 function makeSet(){
   const set={mul:[],div:[],sum:[],mental:[]};
+  // [start inclusive, end exclusive, problems with subtraction, minus entries per problem]
+  const minusPlan=Array(30).fill(0);
+  for(const [start,end,chosen,entries] of [[0,4,2,1],[4,8,1,1],[8,13,2,2],[13,18,2,2],[18,22,2,3],[22,26,1,3],[26,30,2,3]]){
+    shuffle(Array.from({length:end-start},(_,j)=>start+j)).slice(0,chosen).forEach(i=>minusPlan[i]=entries);
+  }
   const mulSpecs=[[2,2],[3,2],[3,3],[4,3],[4,4],[5,4]];
   const divSpecs=[[2,2],[2,3],[3,3],[3,4],[4,4],[4,5]]; // 除数の桁・商の桁
   for(let i=0;i<30;i++){
@@ -18,19 +24,23 @@ function makeSet(){
     let [dd,qd]=divSpecs[band],d=digits(dd),q=digits(qd);
     // 見本に近い大きさで、割り切れる問題を生成する
     set.div.push({a:d*q,b:d,ans:q});
-    const sd=Array(8).fill(i<4?2:i<8?3:i<13?4:i<18?5:i<22?6:i<26?7:8);
-    let vals=sd.map(digits);
-    if(i>=2){
-      let positions=Array.from({length:6},(_,j)=>j+2);
-      const minusCount=i<10?1:i<20?2:3;
-      for(let j=0;j<minusCount;j++){
-        let at=positions.splice(rand(0,positions.length-1),1)[0];
-        const running=vals.slice(0,at).reduce((x,y)=>x+y,0);
-        vals[at]=-Math.min(vals[at],Math.max(1,Math.floor(running/3)));
-      }
-    }
-    set.sum.push({vals,ans:vals.reduce((x,y)=>x+y,0)});
-    const md=Array(6).fill(i<6?2:i<12?3:i<18?4:i<24?5:6);
+         const sd=Array(8).fill(i<4?2:i<8?3:i<13?4:i<18?5:i<22?6:i<26?7:8);
+     let vals=sd.map(digits);
+     // minusPlan is selected exactly once per 30-question set.
+     const minusCount=minusPlan[i];
+     if(minusCount){
+       const positions=shuffle([1,2,3,4,5,6,7]).slice(0,minusCount).sort((a,b)=>a-b);
+       for(const at of positions){
+         const running=vals.slice(0,at).reduce((x,y)=>x+y,0);
+         // Keep the same number of digits and never let an intermediate sum go below zero.
+         const low=10**(sd[at]-1), high=10**sd[at]-1;
+         const cap=Math.min(high,running);
+         if(cap<low){throw Error('見取算の引き算生成に失敗しました')}
+         vals[at]=-rand(low,cap);
+       }
+     }
+     set.sum.push({vals,ans:vals.reduce((x,y)=>x+y,0)});
+const md=Array(6).fill(i<6?2:i<12?3:i<18?4:i<24?5:6);
     let mv=md.map(digits);
     set.mental.push({vals:mv,ans:mv.reduce((x,y)=>x+y,0)});
   }
